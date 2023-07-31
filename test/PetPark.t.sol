@@ -12,7 +12,7 @@ contract PetParkTest is DSTest, PetPark, Test {
     address testOwnerAccount;
 
     address testPrimaryAccount = 0xAb8483F64d9C6d1EcF9b849Ae677dD3315835cb2;
-    address testSecondaryAccount;
+    address testSecondaryAccount = 0x;
 
     function setUp() public {
         petPark = new PetPark();
