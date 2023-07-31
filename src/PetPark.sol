@@ -18,7 +18,11 @@ contract PetPark {
         string animal_name;
         uint256 animal_count;
     }
-
+    struct users {
+        string gender; 
+        uint256 age; 
+    }
+    mapping(address => users) userDetail; 
     mapping(uint256 => petparkbase) animalIdRef; //Id to animal data mapping
     mapping(address => uint256) userBorrowCount; // users borrowCount
     mapping(address => uint256) usersBorrowedAnimalTypeId; // Users Borrowed Animal Id ref
@@ -40,9 +44,11 @@ contract PetPark {
     }
 
     // Anybody can check current data for any animal id
-    function getAnimalData(
-        uint256 _typeID
-    ) public view returns (petparkbase memory) {
+    function getAnimalData(uint256 _typeID)
+        public
+        view
+        returns (petparkbase memory)
+    {
         return animalIdRef[_typeID];
     }
 
@@ -60,18 +66,29 @@ contract PetPark {
     }
 
     // borrow a pet - make sure user has not borrowed a pet earlier
-    function borrow(uint256 age, string memory gender, uint256 _typeId) public {
-        require(userBorrowCount[msg.sender] == 0, "User has already borrowed");
+    function borrow(
+        uint256 age,
+        string memory gender,
+        uint256 _typeId
+    ) public {
+        require(userBorrowCount[msg.sender] == 0, "Already adopted a pet");
+        require(age > 0, "Cannot borrow");
+        //checking if name of the animal id is set, if not, we will assume this ID was not setup
+        require(
+            bytes(animalIdRef[_typeId].animal_name).length > 0,
+            "Invalid animal type"
+        );
+        
 
         if (keccak256(bytes(gender)) == keccak256(bytes("male"))) {
             require(
                 _validateMaleBorrow(_typeId),
-                "Invalid animal type for male borrower"
+                "Invalid animal for men"
             );
         } else if (keccak256(bytes(gender)) == keccak256(bytes("female"))) {
             require(
                 _validateFemaleBorrow(age, _typeId),
-                "Invalid animal type for female borrower"
+                "Invalid animal for women under 40"
             );
         } else {
             revert("Invalid gender provided");
@@ -79,8 +96,9 @@ contract PetPark {
 
         require(
             animalIdRef[_typeId].animal_count > 0,
-            "That animal breed is on the verge of extinction"
+            "Selected animal not available"
         ); ///assuming valid Id has been entered by user
+        require(_validateUserDetails(msg.sender, age, gender), "invalid user details");
         animalIdRef[_typeId].animal_count =
             animalIdRef[_typeId].animal_count -
             1;
@@ -114,16 +132,19 @@ contract PetPark {
                 keccak256(bytes(animal_name)) ==
                 keccak256(bytes(maleBorrowableAnimals[i]))
             ) {
-                return false;
+                return true;
             }
+            
         }
-        return true;
+        return false; 
+        
     }
 
-    function _validateFemaleBorrow(
-        uint256 age,
-        uint256 _typeId
-    ) internal view returns (bool) {
+    function _validateFemaleBorrow(uint256 age, uint256 _typeId)
+        internal
+        view
+        returns (bool)
+    {
         string memory disallowed_animal_name = "Cat";
         string memory animal_name = animalIdRef[_typeId].animal_name;
 
@@ -136,5 +157,14 @@ contract PetPark {
         }
 
         return true; // Allow borrowing for females over age 40 or for any animals
+    }
+
+    function _validateUserDetails(address _user, uint256 _age, string memory _gender) internal view returns (bool){
+        if (bytes(userDetail[_user].gender).length > 0 && userDetail[_user].age == _age && keccak256(bytes(_gender)) == keccak256(bytes(userDetail[_user].gender))) {
+            return true; 
+        }
+        else {
+            return false; 
+        }
     }
 }
